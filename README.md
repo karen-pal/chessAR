@@ -1,6 +1,11 @@
 # chessAR
 I want chess to be as different as possible in all directions.
 
+augmented configurable parametrized machine learning crypto bitcoin cloud microservices chess
+
+<img src="https://i.imgur.com/lBmKxjf.png"></img>
+
+
 # stack (so far)
 chess.js
 chessboard.js
