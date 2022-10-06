@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.js" integrity="sha512-CX7sDOp7UTAq+i1FYIlf9Uo27x4os+kGeoT7rgwvY+4dmjqV0IuE/Bl5hVsjnQPQiTOhAX1O2r2j5bjsFBvv/A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.css" integrity="sha512-KRrFrm+GAPOl6xxootmuQHKDoGiR2Gtifqd6XFUH++sluyhWui3vJCkmt0FN0k/H9TQn0f4sZFltC+XnQAKKvQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<!--script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js" integrity="sha512-WfASs5HtTgTL/eZsLaOftSN9wMQl7WZGlU5UiKx/yxTViMfGh9whWRwKAC27qH8VtZJqSMqDdbq2uUb1tY3jvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script--!>
+<script src="/home/rgbellion/Documents/Projects/chessAR/chessboardjs-1.0.0/js/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js" integrity="sha384-s3XgLpvmHyscVpijnseAmye819Ee3yaGa8NxstkJVyA6nuDFjt59u1QvuEl/mecz" crossorigin="anonymous"></script>
+</head>
+
+
+<body>
+  <div class="container">
+    <video class="input_video" style="display:none;"></video>
+    <canvas class="output_canvas" width="1280px" height="720px" style="position:fixed"></canvas>
+  </div>
+<div id="board1" style="width: 720px; position:fixed; opacity:.5"></div>
+    <canvas class="overlay" width="1280px" height="720px" style="position:fixed"></canvas>
+  <script>
+
+var board1 = Chessboard('board1', 'start')
+var board = null
+var game = new Chess()
+let touch = false;
+let xPos, yPos;
+let boardSize = 720;
+let lastPos = "e4";
+const videoElement = document.getElementsByClassName('input_video')[0];
+const canvasElement = document.getElementsByClassName('output_canvas')[0];
+const canvasCtx = canvasElement.getContext('2d');
+const canvasOverlayElement = document.getElementsByClassName('overlay')[0];
+const canvasOverlayCtx = canvasOverlayElement.getContext('2d');
+
+const mapRange = (value, x1, y1, x2, y2) => (value - x1) * (y2 - x2) / (y1 - x1) + x2;
+function cellFromPosition(X,Y){
+    let columns = ["a","b","c","d","e","f","g","h"];
+    let rows = ["1","2","3","4","5","6","7","8"]
+    //console.log(X);
+    let idx = Math.floor(X/(720/8));
+    //console.log(idx);
+    let idxy = Math.floor(Y/(boardSize/8));
+    //console.log(idx)
+    nameX = columns[idx];
+    nameY = rows[idxy];
+    if (typeof nameX != "undefined" && typeof nameY !="undefined") {
+        return nameX+nameY;
+    }
+        return nameX+nameY;
+    //en algun momento hacer manejo de errores
+}
+
+
+
+function onResults(results) {
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(
+      results.image, 0, 0, canvasElement.width, canvasElement.height);
+  if (results.multiHandLandmarks) {
+    for (const landmarks of results.multiHandLandmarks) {
+      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+                     {color: '#00FF00', lineWidth: 5});
+      drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+    }
+  }
+  canvasCtx.restore();
+    if (typeof results.multiHandLandmarks[0] != "undefined") {
+        //console.log(results.multiHandLandmarks[0][0].x);
+        let indexFinger = results.multiHandLandmarks[0][8]
+        //console.log(indexFinger);
+        let thumbFinger = results.multiHandLandmarks[0][4]
+        //console.log(thumbFinger);
+        if (Math.abs(indexFinger.x - thumbFinger.x) < .01){
+            console.log("TOUCH")
+            touch = true;
+            canvasOverlayCtx.rect(indexFinger.x -100, indexFinger.y-100, indexFinger.x+100, indexFinger.y+100);
+            xPos = mapRange(indexFinger.x, 1, 0, 0, 1280);
+            yPos = mapRange(indexFinger.y,1,0,0,720);
+            //console.log("X: ",xPos);
+            //console.log("Y:",yPos)
+            if (xPos < boardSize){
+                initialCell = cellFromPosition(xPos,yPos);
+                console.log("INITIAL!:",initialCell);
+                //e2-e4
+                lastPos = initialCell;
+                    //makeMove(newCell);
+            }     
+        } else {
+            if (touch) {
+            xPos = mapRange(indexFinger.x, 0, 1, 0, 1280);
+            yPos = mapRange(indexFinger.y,0,1,0,720);
+            newCell = cellFromPosition(xPos,yPos)
+                console.log("LAST!:" ,newCell)
+            completeMove = lastPos+"-"+newCell;
+            console.log(">>>>>>complete move: ",completeMove);
+            board.move(completeMove);
+            touch = false;
+            lastPos = newCell;
+            }
+
+        }
+
+  //console.log(720/8)
+}
+}
+const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+hands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+hands.onResults(onResults);
+
+
+//select webcam. for default camera, comment this code:
+
+const constraints = {
+    audio:false,
+    video: {},
+  };
+  navigator.mediaDevices
+    .getUserMedia(constraints)
+    .then(stream => {
+      currentStream = stream;
+      videoElement.srcObject = stream;
+      return navigator.mediaDevices.enumerateDevices();
+    })
+    .catch(error => {
+      console.error(error);
+    });
+
+
+//select webcam. for default camera, comment this code:
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await hands.send({image: videoElement});
+  },
+  width: 1280,
+  height: 720
+});
+camera.start(1);
+
+
+//chesss
+
+//callback en onresult cuando la mano entre cierto perìmetro
+//que se fije que los dedos se junten!
+// que eso largue un game.move
+//chequear en qué cuadrado està la mano, si es que està
+
+
+// --- Begin Example JS --------------------------------------------------------
+// NOTE: this example uses the chess.js library:
+// https://github.com/jhlywa/chess.js
+
+
+//console.log(game);
+function makeMove (movw) {
+  console.log("ON MAKE MOVE");
+    var possibleMoves = game.moves()
+    //console.log(possibleMoves[0])
+    //console.log("TODOS:");
+    //console.log(possibleMoves);
+  // exit if the game is over
+  if (game.game_over()) return
+
+  var randomIdx = Math.floor(Math.random() * possibleMoves.length)
+  
+  //game.move(possibleMoves[randomIdx])
+  game.move(movw);
+  board.position(game.fen())
+
+
+  //window.setTimeout(makeRandomMove, 500)
+}
+
+board = Chessboard('board1', 'start')
+//console.log(game["SQUARES"]); //del 0 al 7 -> i8, del 8 al 15 -> i7 .. (offset) => (('a')=>0)+offset*7 con offset=1 te da a7, con offset=2 te da a6 y asi?
+//console.log(game.SQUARES[21]);
+
+//window.setTimeout(makeRandomMove, 500)
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function demo() {
+    for (let i = 0; i < 2; i++) {
+        console.log(`Waiting ${i} seconds...`);
+        await sleep(i * 1000);
+    }
+    console.log('Done');
+}
+
+makeMove("a2-a4");
+demo().then(()=>makeMove("f6"));
+// --- End Example JS ----------------------------------------------------------
+
+
+</script>
+</body>
+</html>
