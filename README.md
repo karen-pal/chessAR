@@ -1,9 +1,21 @@
 # chessAR
-I want chess to be as different as possible in all directions.
+
+(STATUS := WIP)
+
+Hey. I want chess to be as different as possible in all directions.
 
 augmented configurable parametrized machine learning crypto bitcoin cloud microservices chess
+Solidity salary 500 dollars a month.
+    just let me play
+
 
 <img src="https://i.imgur.com/lBmKxjf.png"></img>
+
+# Usage
+just open index.html on your browser.
+
+Only tested with chrome so far.
+
 
 
 # stack (so far)
